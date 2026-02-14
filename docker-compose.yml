@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  x-automation-agent:
+    build: .
+    container_name: x_automation_agent
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./automation.db:/app/automation.db
+      - ./logs:/app/logs
+    restart: unless-stopped

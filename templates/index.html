@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X Automation Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .form-group {
+            margin: 20px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        textarea,
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus,
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 150px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button.stop-btn {
+            background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status-box.show {
+            display: block;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .running {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .progress-log {
+            margin-top: 15px;
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .progress-log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .progress-log::-webkit-scrollbar-track {
+            background: #2a2a2a;
+        }
+
+        .progress-log::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .report {
+            margin-top: 10px;
+            font-size: 0.95em;
+        }
+
+        .report-item {
+            margin: 5px 0;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* History Section Styles */
+        .history-section {
+            margin-top: 40px;
+            border-top: 2px solid #eee;
+            padding-top: 30px;
+        }
+
+        .history-title {
+            font-size: 1.5em;
+            color: #764ba2;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .history-item {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            transition: box-shadow 0.3s;
+        }
+
+        .history-item:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .history-url {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .history-text {
+            color: #444;
+            font-style: italic;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+            margin-top: 5px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: 1px solid #764ba2;
+            color: #764ba2;
+            padding: 5px 15px;
+            width: auto;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🤖 X Automation Agent</h1>
+        <p style="color: #666; margin-bottom: 20px;">Automated reply system for X (History Enabled)</p>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ today_count }}</div>
+                <div class="stat-label">Today's Replies</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ remaining }}</div>
+                <div class="stat-label">Remaining</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ daily_limit }}</div>
+                <div class="stat-label">Daily Limit</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Grok Prompt Helper Section -->
+    <div class="form-group"
+        style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e0e0e0; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label style="margin: 0; color: #764ba2;">🤖 Grok Prompt Helper (Copy for Grok)</label>
+            <button type="button" onclick="copyPrompt()"
+                style="padding: 8px 15px; font-size: 0.9em; width: auto; background: #667eea;">📋 Copy Prompt</button>
+        </div>
+        <textarea id="grok-prompt" style="min-height: 100px; font-size: 0.9em; color: #555;">mujhe in account se post do (post link + text version of post). 
+jo abhi abhi 1 hour m post ki gyi ho. 
+
+@marclou
+@UiSavior
+@Davidjpark96
+@tibo_maker
+@levelsio
+@codyschneiderxx
+@iamfra5er
+@yasser_elsaid_
+@nickbakeddesign
+@devbasu
+@JaredSleeper
+@kalashbuilds
+@uxchrisnguyen
+@IslamRashi2000
+@om_patel5
+@KalyfaMuhd
+@xeeliz
+@AngelinaUXN
+@musa_pyuza
+@newincreative
+@alexhaagaard
+@jeggers
+@tessalau
+@petecodes
+@JensLennartsson
+@aazarshad
+@nocodelife
+@AlexWestCo
+@AlexHaagaard
+@AngelList
+@BenTossell
+@ChrisNguyenUX
+@ChrisOlson
+@CodexCoder
+@DannyPostmaa
+@DevBasu
+@DougCollinsUX
+@Ellevenio
+@EthanGarr
+@Gavofyork
+@Hnshah
+@Housecor
+@Imoyse
+@JanuBuilds
+@Jasonfried
+@Jh3yy
+@Johncutlefish
+@Justcreative
+@Levelsio
+@Lisadziuba
+@Mlane
+@Newincreative
+@OllyMeakings
+@PatmMatthews
+@Petecodes
+@PieterLevels
+@RachelAndrew
+@Sarasoueidan
+@SeanEllis
+@Stucollett
+@VadimNotJustDev
+@Wojtekim
+@Yongfook</textarea>
+    </div>
+
+    <form id="automation-form">
+        <div class="form-group">
+            <label for="post_urls">Grok Output / Post Links & Content:</label>
+            <textarea id="post_urls" name="post_urls"
+                placeholder="Example Format:&#10;https://x.com/user/status/123 ne post kiya: 'Generated this ugc ad...'&#10;&#10;OR just paste the whole block from Grok!"
+                required></textarea>
+            <small style="color: #888;">Note: Har post ke liye <strong>X Link</strong> hona zaroori hai.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="target_count">Number of Replies:</label>
+            <input type="number" id="target_count" name="target_count" min="1" max="{{ remaining }}" value="10"
+                required>
+        </div>
+
+        <button type="submit" id="run-btn">🚀 Start Automation</button>
+        <button type="button" id="stop-btn" class="stop-btn" style="display:none;">🛑 Stop Automation</button>
+    </form>
+
+    <div class="status-box" id="status-box">
+        <div id="status-message"></div>
+        <div class="progress-bar-container" id="progress-bar-container" style="display:none;">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-log" id="progress-log"></div>
+        <div class="report" id="report"></div>
+    </div>
+
+    <!-- History Section -->
+    <div class="history-section">
+        <div class="history-title">
+            <span>🕒 Last 1-3 Days History</span>
+            <button onclick="loadHistory()" class="refresh-btn">🔄 Refresh</button>
+        </div>
+        <div id="history-list" class="history-list">
+            <p style="text-align: center; color: #888;">Loading history...</p>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('automation-form');
+        const statusBox = document.getElementById('status-box');
+        const statusMessage = document.getElementById('status-message');
+        const reportDiv = document.getElementById('report');
+        const runBtn = document.getElementById('run-btn');
+        const progressLog = document.getElementById('progress-log');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const progressBar = document.getElementById('progress-bar');
+        const stopBtn = document.getElementById('stop-btn');
+        const historyList = document.getElementById('history-list');
+
+        // Load history on page load
+        window.onload = loadHistory;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+
+            runBtn.disabled = true;
+            statusBox.className = 'status-box show running';
+            statusMessage.textContent = '⏳ Starting automation...';
+            reportDiv.innerHTML = '';
+            progressLog.textContent = '';
+            progressBarContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    stopBtn.style.display = 'block';
+                    runBtn.style.display = 'none';
+                    pollStatus();
+                } else {
+                    statusBox.className = 'status-box show error';
+                    statusMessage.textContent = '❌ ' + result.message;
+                    runBtn.disabled = false;
+                }
+            } catch (error) {
+                statusBox.className = 'status-box show error';
+                statusMessage.textContent = '❌ Error: ' + error.message;
+                runBtn.disabled = false;
+            }
+        });
+
+        async function pollStatus() {
+            try {
+                const response = await fetch('/status');
+                const status = await response.json();
+
+                if (status.running) {
+                    statusMessage.textContent = '⏳ Running...';
+
+                    // Update progress log
+                    if (status.progress_log && status.progress_log.length > 0) {
+                        progressLog.textContent = status.progress_log.join('\n');
+                        progressLog.scrollTop = progressLog.scrollHeight;
+                    }
+
+                    setTimeout(pollStatus, 1000);
+                } else if (status.report) {
+                    stopBtn.style.display = 'none';
+                    runBtn.style.display = 'block';
+                    showReport(status.report, status.progress_log);
+                    runBtn.disabled = false;
+                    loadHistory(); // Refresh history after run
+                }
+            } catch (error) {
+                console.error('Status poll error:', error);
+                setTimeout(pollStatus, 1000);
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    historyList.innerHTML = '<p style="text-align: center; color: #888;">No history yet. Start automation to see results!</p>';
+                    return;
+                }
+
+                historyList.innerHTML = data.map(item => `
+                    <div class="history-item">
+                        <div class="history-header">
+                            <a href="${item.post_url}" target="_blank" class="history-url">${item.post_url.split('/status/')[0].split('/').pop()}</a>
+                            <span>${new Date(item.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div class="history-text">"${item.reply_text}"</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load history:', error);
+            }
+        }
+
+        function showReport(report, logMessages) {
+            if (report.status === 'completed') {
+                statusBox.className = 'status-box show success';
+                statusMessage.textContent = '✅ Session completed!';
+                progressBar.style.width = '100%';
+
+                // Show final log
+                if (logMessages && logMessages.length > 0) {
+                    progressLog.textContent = logMessages.join('\n');
+                    progressLog.scrollTop = progressLog.scrollHeight;
+                }
+
+                reportDiv.innerHTML = `
+                    <div class="report-item"><strong>✅ Replies Posted:</strong> ${report.total_replies}</div>
+                    <div class="report-item"><strong>⏭️ Skipped:</strong> ${report.skipped}</div>
+                    <div class="report-item"><strong>❌ Failed:</strong> ${report.failed}</div>
+                    <p style="color: #666; font-size: 0.8em; margin-top: 10px;">(Check History section below for details)</p>
+                `;
+
+                if (report.errors && report.errors.length > 0) {
+                    reportDiv.innerHTML += '<div class="report-item"><strong>Errors:</strong><br>' + report.errors.join('<br>') + '</div>';
+                }
+
+                // Removed auto-reload to keep logs visible
+            } else {
+                statusBox.className = 'status-box show error';
+                statusMessage.textContent = '❌ ' + (report.message || 'Unknown error');
+                progressBar.style.width = '0%';
+            }
+        }
+
+        function copyPrompt() {
+            const promptText = document.getElementById('grok-prompt');
+            promptText.select();
+            document.execCommand('copy');
+
+            const btn = document.querySelector('button[onclick="copyPrompt()"]');
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }
+    </script>
+</body>
+
+</html>
