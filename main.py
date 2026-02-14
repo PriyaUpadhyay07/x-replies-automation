@@ -140,7 +140,21 @@ async def stop_automation():
 
 if __name__ == "__main__":
     import os
-    Config.validate()
-    db.cleanup_old_data(days=3)
+    print("🚀 Starting X Automation Agent...")
+    
+    try:
+        Config.validate()
+        print("✅ Configuration validated.")
+    except Exception as e:
+        print(f"⚠️ Configuration Warning: {e}")
+        print("Application will start but might fail during automation runs.")
+        
+    try:
+        db.cleanup_old_data(days=3)
+        print("✅ Database cleanup completed.")
+    except Exception as e:
+        print(f"⚠️ Database Error: {e}")
+
     port = int(os.environ.get("PORT", 8000))
+    print(f"📡 Listening on port: {port}")
     uvicorn.run("main:app", host="0.0.0.0", port=port)
