@@ -192,9 +192,14 @@ class Agent:
         
         log(f"💬 Reply: \"{reply_text}\"")
         
-        # Post reply (twitter_client now handles retries internally)
+        # Check if rate limited before trying to post
+        if self.twitter.is_rate_limited():
+            remaining = self.twitter.get_rate_limit_remaining()
+            log(f"⏸️ Rate limit cooldown active. Waiting {remaining//60}m {remaining%60}s before posting...")
+        
+        # Post reply (twitter_client handles retries + rate limit waits internally)
         log(f"📤 Posting (with auto-retry)...")
-        success, error_detail = self.twitter.post_reply(tweet_id, reply_text)
+        success, error_detail = self.twitter.post_reply(tweet_id, reply_text, log_func=log)
         
         if success:
             # Save to database

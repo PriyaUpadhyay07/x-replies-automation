@@ -22,8 +22,8 @@ class Config:
     REPLY_DELAY_MIN = int(os.getenv("REPLY_DELAY_MIN", 60))
     REPLY_DELAY_MAX = int(os.getenv("REPLY_DELAY_MAX", 180))
     BATCH_SIZE = int(os.getenv("BATCH_SIZE", 10))
-    BATCH_BREAK_MIN = int(os.getenv("BATCH_BREAK_MIN", 600))  # 10 minutes
-    BATCH_BREAK_MAX = int(os.getenv("BATCH_BREAK_MAX", 900))  # 15 minutes
+    BATCH_BREAK_MIN = int(os.getenv("BATCH_BREAK_MIN", 180))  # 3 minutes
+    BATCH_BREAK_MAX = int(os.getenv("BATCH_BREAK_MAX", 300))  # 5 minutes
     
     @classmethod
     def validate(cls):

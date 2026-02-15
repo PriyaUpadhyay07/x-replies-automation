@@ -13,7 +13,9 @@ class TwitterClient:
     def __init__(self):
         self._init_client()
         self.MAX_RETRIES = 3
+        self.RATE_LIMIT_RETRIES = 2  # Extra retries for rate limits
         self.RETRY_DELAYS = [5, 15, 30]  # Exponential backoff (seconds)
+        self.rate_limited_until = 0  # Timestamp when rate limit expires
 
     def _init_client(self):
         """Initialize or re-initialize the Tweepy client (self-healing reconnect)."""
@@ -28,13 +30,13 @@ class TwitterClient:
         """Classify an error as retryable or permanent, with details."""
         error_str = str(error).lower()
         
-        # Rate limit errors — RETRYABLE (wait and try again)
+        # Rate limit errors — RETRYABLE (wait longer)
         if "429" in str(error) or "rate limit" in error_str or "too many" in error_str:
             return {
                 "retryable": True,
                 "category": "rate_limit",
-                "message": f"Rate limited by Twitter. Will auto-retry.",
-                "wait_time": 60  # Wait 1 minute on rate limit
+                "message": f"Rate limited by Twitter.",
+                "wait_time": 180  # Wait 3 minutes on rate limit, then retry
             }
         
         # Server errors (500, 502, 503, 504) — RETRYABLE
@@ -128,41 +130,73 @@ class TwitterClient:
         print(f"get_tweet failed after {self.MAX_RETRIES} attempts: {last_error}")
         return None
 
-    def post_reply(self, tweet_id: str, reply_text: str) -> Tuple[bool, str]:
+    def is_rate_limited(self) -> bool:
+        """Check if we're currently in a rate limit cooldown."""
+        return time.time() < self.rate_limited_until
+
+    def get_rate_limit_remaining(self) -> int:
+        """Get seconds remaining in rate limit cooldown."""
+        remaining = self.rate_limited_until - time.time()
+        return max(0, int(remaining))
+
+    def post_reply(self, tweet_id: str, reply_text: str, log_func=None) -> Tuple[bool, str]:
         """
         Post a reply with auto-retry and detailed error reporting.
         Returns (success: bool, error_detail: str).
         On success, error_detail is empty.
+        log_func: optional callback to send progress to UI.
         """
+        def log(msg):
+            if log_func:
+                log_func(msg)
+            print(msg)
+
+        # If we're in a rate limit cooldown, wait it out first
+        if self.is_rate_limited():
+            wait_secs = self.get_rate_limit_remaining()
+            log(f"   ⏸️ Rate limit active. Waiting {wait_secs//60}m {wait_secs%60}s...")
+            time.sleep(wait_secs)
+
         last_error_msg = ""
         reconnected = False
+        max_retries = self.MAX_RETRIES
         
-        for attempt in range(self.MAX_RETRIES):
+        for attempt in range(max_retries):
             try:
                 response = self.client.create_tweet(
                     text=reply_text,
                     in_reply_to_tweet_id=tweet_id
                 )
                 if response.data is not None:
+                    self.rate_limited_until = 0  # Reset on success
                     return (True, "")
                 else:
                     last_error_msg = "API returned empty response"
             except Exception as e:
                 err_info = self._classify_error(e)
                 last_error_msg = err_info["message"]
-                print(f"[Retry {attempt+1}/{self.MAX_RETRIES}] post_reply error: {last_error_msg}")
+                log(f"   ⚠️ Attempt {attempt+1}/{max_retries}: {last_error_msg}")
                 
                 # Self-healing: reconnect on auth errors (once)
                 if err_info.get("reconnect") and not reconnected:
-                    print("  -> Reconnecting Twitter client...")
+                    log("   🔄 Reconnecting Twitter client...")
                     self._init_client()
                     reconnected = True
                 
-                if not err_info["retryable"] or attempt == self.MAX_RETRIES - 1:
+                # Rate limit: set cooldown and do longer wait
+                if err_info["category"] == "rate_limit":
+                    self.rate_limited_until = time.time() + err_info["wait_time"]
+                    if attempt < max_retries - 1:
+                        wait_min = err_info["wait_time"] // 60
+                        log(f"   ⏸️ Rate limited. Cooling down for {wait_min} minutes...")
+                        time.sleep(err_info["wait_time"])
+                        continue
+                
+                if not err_info["retryable"] or attempt == max_retries - 1:
                     break
                 
                 wait = err_info["wait_time"]
-                print(f"  -> Waiting {wait}s before retry...")
+                log(f"   ⏳ Waiting {wait}s before retry...")
                 time.sleep(wait)
         
         return (False, last_error_msg)
