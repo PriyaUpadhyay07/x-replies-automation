@@ -27,6 +27,73 @@ session_status = {
     "progress_log": []
 }
 
+DEFAULT_GROK_PROMPT = """mujhe in account se post do (post link + text version of post). 
+jo abhi abhi 1 hour m post ki gyi ho. 
+
+@marclou
+@UiSavior
+@Davidjpark96
+@tibo_maker
+@levelsio
+@codyschneiderxx
+@iamfra5er
+@yasser_elsaid_
+@nickbakeddesign
+@devbasu
+@JaredSleeper
+@kalashbuilds
+@uxchrisnguyen
+@IslamRashi2000
+@om_patel5
+@KalyfaMuhd
+@xeeliz
+@AngelinaUXN
+@musa_pyuza
+@newincreative
+@alexhaagaard
+@jeggers
+@tessalau
+@petecodes
+@JensLennartsson
+@aazarshad
+@nocodelife
+@AlexWestCo
+@AlexHaagaard
+@AngelList
+@BenTossell
+@ChrisNguyenUX
+@ChrisOlson
+@CodexCoder
+@DannyPostmaa
+@DevBasu
+@DougCollinsUX
+@Ellevenio
+@EthanGarr
+@Gavofyork
+@Hnshah
+@Housecor
+@Imoyse
+@JanuBuilds
+@Jasonfried
+@Jh3yy
+@Johncutlefish
+@Justcreative
+@Levelsio
+@Lisadziuba
+@Mlane
+@Newincreative
+@OllyMeakings
+@PatmMatthews
+@Petecodes
+@PieterLevels
+@RachelAndrew
+@Sarasoueidan
+@SeanEllis
+@Stucollett
+@VadimNotJustDev
+@Wojtekim
+@Yongfook"""
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render the main UI page."""
@@ -34,7 +101,7 @@ async def home(request: Request):
     remaining = Config.DAILY_REPLY_LIMIT - today_count
     
     # Load saved prompt or use default
-    saved_prompt = db.get_setting("grok_prompt")
+    saved_prompt = db.get_setting("grok_prompt", DEFAULT_GROK_PROMPT)
     
     return templates.TemplateResponse("index.html", {
         "request": request,
