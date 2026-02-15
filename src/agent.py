@@ -140,7 +140,7 @@ class Agent:
         return report
     
     def _process_single_post(self, url: str, provided_text: str = None, logger=None) -> Dict:
-        """Process a single post: extract ID, generate reply, post it."""
+        """Process a single post: extract ID, generate reply, post it. With auto-retry."""
         
         def log(msg):
             if logger:
@@ -192,9 +192,9 @@ class Agent:
         
         log(f"💬 Reply: \"{reply_text}\"")
         
-        # Post reply
-        log(f"📤 Posting...")
-        success = self.twitter.post_reply(tweet_id, reply_text)
+        # Post reply (twitter_client now handles retries internally)
+        log(f"📤 Posting (with auto-retry)...")
+        success, error_detail = self.twitter.post_reply(tweet_id, reply_text)
         
         if success:
             # Save to database
@@ -204,5 +204,6 @@ class Agent:
             log(f"✅ Posted successfully!")
             return {"status": "success", "reply": reply_text}
         else:
-            log(f"❌ Failed to post")
-            return {"status": "failed", "error": "Twitter API error"}
+            log(f"❌ Failed to post: {error_detail}")
+            return {"status": "failed", "error": error_detail or "Twitter API error"}
+
