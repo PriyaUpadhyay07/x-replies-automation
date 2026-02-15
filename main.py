@@ -44,10 +44,14 @@ async def home(request: Request):
 @app.post("/run")
 async def run_automation(
     post_urls: str = Form(...),
-    target_count: int = Form(...)
+    target_count: int = Form(None)
 ):
-    """Run the automation with given post URLs and target count."""
+    """Run the automation with given post URLs and optional target count."""
     global session_status
+    
+    # If no target count provided, default to a high number to process all provided
+    if target_count is None:
+        target_count = 999
     
     if session_status["running"]:
         return JSONResponse({

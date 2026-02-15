@@ -379,9 +379,9 @@ jo abhi abhi 1 hour m post ki gyi ho.
         </div>
 
         <div class="form-group">
-            <label for="target_count">Number of Replies:</label>
-            <input type="number" id="target_count" name="target_count" min="1" max="{{ remaining }}" value="10"
-                required>
+            <label for="target_count">Number of Replies (Optional - Leave blank for all):</label>
+            <input type="number" id="target_count" name="target_count" min="1" max="{{ remaining }}"
+                placeholder="e.g. 10 (Leave empty to process all provided posts)">
         </div>
 
         <button type="submit" id="run-btn">🚀 Start Automation</button>
