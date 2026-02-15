@@ -299,6 +299,9 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <label style="margin: 0; color: #764ba2;">🤖 Grok Prompt Helper (Copy for Grok)</label>
             <div style="display: flex; gap: 10px;">
+                <button type="button" id="reset-prompt-btn"
+                    style="padding: 8px 15px; font-size: 0.9em; width: auto; background: #888;">🔄 Reset
+                    Default</button>
                 <button type="button" id="save-prompt-btn"
                     style="padding: 8px 15px; font-size: 0.9em; width: auto; background: #764ba2;">💾 Save
                     Prompt</button>
@@ -350,13 +353,46 @@
         </div>
     </div>
     <div style="text-align: center; margin-top: 40px; padding-bottom: 20px; color: #888; font-size: 0.8em;">
-        v1.3 - Last Updated: Feb 15, 16:35 IST (Persistent Prompt Fix)
+        v1.4 - Last Updated: Feb 15, 16:45 IST (Reset & Sanitization Fix)
     </div>
     </div>
 
     <script>
+        // ============================================================
+        // SAFE JSON PARSER — prevents "Unexpected token" crashes
+        // If the server returns non-JSON (e.g. raw 500 text from proxy),
+        // this returns a clean error object instead of crashing.
+        // ============================================================
+        async function safeJson(response) {
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return { status: "error", message: text.substring(0, 200) || "Unknown server error" };
+            }
+        }
+
         const savePromptBtn = document.getElementById('save-prompt-btn');
+        const resetPromptBtn = document.getElementById('reset-prompt-btn');
         const grokPromptTextarea = document.getElementById('grok-prompt');
+
+        resetPromptBtn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to reset the prompt to default?')) return;
+            resetPromptBtn.disabled = true;
+            try {
+                const response = await fetch('/reset_prompt', { method: 'POST' });
+                const result = await safeJson(response);
+                if (result.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Reset failed: ' + result.message);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                resetPromptBtn.disabled = false;
+            }
+        });
 
         savePromptBtn.addEventListener('click', async () => {
             const prompt = grokPromptTextarea.value;
@@ -371,7 +407,7 @@
                     method: 'POST',
                     body: formData
                 });
-                const result = await response.json();
+                const result = await safeJson(response);
                 if (result.status === 'success') {
                     savePromptBtn.textContent = '✅ Saved!';
                 } else {
@@ -379,7 +415,7 @@
                     savePromptBtn.textContent = originalText;
                 }
             } catch (error) {
-                console.error('Save error:', error);
+                alert('Network error: ' + error.message);
                 savePromptBtn.textContent = originalText;
             } finally {
                 savePromptBtn.disabled = false;
@@ -408,7 +444,7 @@
             stopBtn.textContent = '🛑 Stopping...';
             try {
                 const response = await fetch('/stop', { method: 'POST' });
-                const result = await response.json();
+                const result = await safeJson(response);
                 statusMessage.textContent = '⏳ ' + result.message;
             } catch (error) {
                 console.error('Stop error:', error);
@@ -434,7 +470,7 @@
                     body: formData
                 });
 
-                const result = await response.json();
+                const result = await safeJson(response);
 
                 if (result.status === 'success') {
                     stopBtn.style.display = 'block';
@@ -455,7 +491,7 @@
         async function pollStatus() {
             try {
                 const response = await fetch('/status');
-                const status = await response.json();
+                const status = await safeJson(response);
 
                 if (status.running) {
                     statusMessage.textContent = '⏳ Running...';
@@ -483,7 +519,13 @@
         async function loadHistory() {
             try {
                 const response = await fetch('/history');
-                const data = await response.json();
+                const data = await safeJson(response);
+
+                // If safeJson returned an error object, treat as empty
+                if (data.status === 'error') {
+                    historyList.innerHTML = '<p style="text-align: center; color: #888;">Could not load history.</p>';
+                    return;
+                }
 
                 if (data.length === 0) {
                     historyList.innerHTML = '<p style="text-align: center; color: #888;">No history yet. Start automation to see results!</p>';

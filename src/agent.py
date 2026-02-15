@@ -11,6 +11,13 @@ from .llm_client import LLMClient
 from .config import Config
 
 class Agent:
+    def __init__(self):
+        self.db = Database()
+        self.twitter = TwitterClient()
+        self.llm = LLMClient()
+        self.stop_requested = False
+        self.session_start_time = None
+
     def interruptible_sleep(self, seconds, log_func=None):
         """Sleep in small increments to remain responsive to stop requests."""
         for _ in range(int(seconds)):
