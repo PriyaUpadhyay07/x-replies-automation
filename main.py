@@ -33,13 +33,23 @@ async def home(request: Request):
     today_count = db.get_today_reply_count()
     remaining = Config.DAILY_REPLY_LIMIT - today_count
     
+    # Load saved prompt or use default
+    saved_prompt = db.get_setting("grok_prompt")
+    
     return templates.TemplateResponse("index.html", {
         "request": request,
         "today_count": today_count,
         "daily_limit": Config.DAILY_REPLY_LIMIT,
         "remaining": remaining,
-        "session_status": session_status
+        "session_status": session_status,
+        "saved_prompt": saved_prompt
     })
+
+@app.post("/save_prompt")
+async def save_prompt(prompt: str = Form(...)):
+    """Save the Grok prompt to the database."""
+    db.set_setting("grok_prompt", prompt)
+    return JSONResponse({"status": "success", "message": "✅ Prompt saved successfully!"})
 
 @app.post("/run")
 async def run_automation(

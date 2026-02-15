@@ -298,75 +298,82 @@
         style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e0e0e0; margin-bottom: 30px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <label style="margin: 0; color: #764ba2;">🤖 Grok Prompt Helper (Copy for Grok)</label>
-            <button type="button" onclick="copyPrompt()"
-                style="padding: 8px 15px; font-size: 0.9em; width: auto; background: #667eea;">📋 Copy Prompt</button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="save-prompt-btn"
+                    style="padding: 8px 15px; font-size: 0.9em; width: auto; background: #764ba2;">💾 Save
+                    Prompt</button>
+                <button type="button" onclick="copyPrompt()"
+                    style="padding: 8px 15px; font-size: 0.9em; width: auto; background: #667eea;">📋 Copy
+                    Prompt</button>
+            </div>
         </div>
-        <textarea id="grok-prompt" style="min-height: 100px; font-size: 0.9em; color: #555;">mujhe in account se post do (post link + text version of post). 
-jo abhi abhi 1 hour m post ki gyi ho. 
+        <textarea id="grok-prompt"
+            style="min-height: 100px; font-size: 0.9em; color: #555;">{{ saved_prompt if saved_prompt else "mujhe in account se post do..." }}</textarea>jo
+        abhi abhi 1 hour m post ki gyi ho.
 
-@marclou
-@UiSavior
-@Davidjpark96
-@tibo_maker
-@levelsio
-@codyschneiderxx
-@iamfra5er
-@yasser_elsaid_
-@nickbakeddesign
-@devbasu
-@JaredSleeper
-@kalashbuilds
-@uxchrisnguyen
-@IslamRashi2000
-@om_patel5
-@KalyfaMuhd
-@xeeliz
-@AngelinaUXN
-@musa_pyuza
-@newincreative
-@alexhaagaard
-@jeggers
-@tessalau
-@petecodes
-@JensLennartsson
-@aazarshad
-@nocodelife
-@AlexWestCo
-@AlexHaagaard
-@AngelList
-@BenTossell
-@ChrisNguyenUX
-@ChrisOlson
-@CodexCoder
-@DannyPostmaa
-@DevBasu
-@DougCollinsUX
-@Ellevenio
-@EthanGarr
-@Gavofyork
-@Hnshah
-@Housecor
-@Imoyse
-@JanuBuilds
-@Jasonfried
-@Jh3yy
-@Johncutlefish
-@Justcreative
-@Levelsio
-@Lisadziuba
-@Mlane
-@Newincreative
-@OllyMeakings
-@PatmMatthews
-@Petecodes
-@PieterLevels
-@RachelAndrew
-@Sarasoueidan
-@SeanEllis
-@Stucollett
-@VadimNotJustDev
-@Wojtekim
-@Yongfook</textarea>
+        @marclou
+        @UiSavior
+        @Davidjpark96
+        @tibo_maker
+        @levelsio
+        @codyschneiderxx
+        @iamfra5er
+        @yasser_elsaid_
+        @nickbakeddesign
+        @devbasu
+        @JaredSleeper
+        @kalashbuilds
+        @uxchrisnguyen
+        @IslamRashi2000
+        @om_patel5
+        @KalyfaMuhd
+        @xeeliz
+        @AngelinaUXN
+        @musa_pyuza
+        @newincreative
+        @alexhaagaard
+        @jeggers
+        @tessalau
+        @petecodes
+        @JensLennartsson
+        @aazarshad
+        @nocodelife
+        @AlexWestCo
+        @AlexHaagaard
+        @AngelList
+        @BenTossell
+        @ChrisNguyenUX
+        @ChrisOlson
+        @CodexCoder
+        @DannyPostmaa
+        @DevBasu
+        @DougCollinsUX
+        @Ellevenio
+        @EthanGarr
+        @Gavofyork
+        @Hnshah
+        @Housecor
+        @Imoyse
+        @JanuBuilds
+        @Jasonfried
+        @Jh3yy
+        @Johncutlefish
+        @Justcreative
+        @Levelsio
+        @Lisadziuba
+        @Mlane
+        @Newincreative
+        @OllyMeakings
+        @PatmMatthews
+        @Petecodes
+        @PieterLevels
+        @RachelAndrew
+        @Sarasoueidan
+        @SeanEllis
+        @Stucollett
+        @VadimNotJustDev
+        @Wojtekim
+        @Yongfook</textarea>
     </div>
 
     <form id="automation-form">
@@ -410,6 +417,40 @@ jo abhi abhi 1 hour m post ki gyi ho.
     </div>
 
     <script>
+        const savePromptBtn = document.getElementById('save-prompt-btn');
+        const grokPromptTextarea = document.getElementById('grok-prompt');
+
+        savePromptBtn.addEventListener('click', async () => {
+            const prompt = grokPromptTextarea.value;
+            savePromptBtn.disabled = true;
+            const originalText = savePromptBtn.textContent;
+            savePromptBtn.textContent = '⏳ Saving...';
+
+            try {
+                const formData = new FormData();
+                formData.append('prompt', prompt);
+                const response = await fetch('/save_prompt', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    savePromptBtn.textContent = '✅ Saved!';
+                } else {
+                    alert('Error saving prompt: ' + result.message);
+                    savePromptBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                savePromptBtn.textContent = originalText;
+            } finally {
+                savePromptBtn.disabled = false;
+                setTimeout(() => {
+                    savePromptBtn.textContent = originalText;
+                }, 2000);
+            }
+        });
+
         const form = document.getElementById('automation-form');
         const statusBox = document.getElementById('status-box');
         const statusMessage = document.getElementById('status-message');
