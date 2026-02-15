@@ -424,6 +424,18 @@ jo abhi abhi 1 hour m post ki gyi ho.
         // Load history on page load
         window.onload = loadHistory;
 
+        stopBtn.addEventListener('click', async () => {
+            stopBtn.disabled = true;
+            stopBtn.textContent = '🛑 Stopping...';
+            try {
+                const response = await fetch('/stop', { method: 'POST' });
+                const result = await response.json();
+                statusMessage.textContent = '⏳ ' + result.message;
+            } catch (error) {
+                console.error('Stop error:', error);
+            }
+        });
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 

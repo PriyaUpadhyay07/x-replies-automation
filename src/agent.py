@@ -11,14 +11,14 @@ from .llm_client import LLMClient
 from .config import Config
 
 class Agent:
-    def __init__(self):
-        self.db = Database()
-        self.twitter = TwitterClient()
-        self.llm = LLMClient()
-        self.db.clear_old_daily_replies()  # Clean up old replies
-        self.stop_requested = False  # Flag to stop mid-session
-        self.session_start_time = None
-    
+    def interruptible_sleep(self, seconds, log_func=None):
+        """Sleep in small increments to remain responsive to stop requests."""
+        for _ in range(int(seconds)):
+            if self.stop_requested:
+                return True
+            time.sleep(1)
+        return False
+
     def run_session(self, session_data: List[Dict], target_count: int, progress_callback=None) -> Dict:
         """
         Run a reply session for the given data (URL + optional content).
@@ -61,7 +61,8 @@ class Agent:
             "failed": 0,
             "errors": [],
             "success_posts": [],
-            "progress_log": []
+            "progress_log": [],
+            "stopped_by_user": False
         }
         
         processed = 0
@@ -74,6 +75,7 @@ class Agent:
             # Check if stop was requested
             if self.stop_requested:
                 log_progress(f"🛑 Stop requested by user. Stopping session.")
+                report["stopped_by_user"] = True
                 break
             
             if processed >= actual_target:
@@ -87,7 +89,10 @@ class Agent:
             if batch_count > 0 and batch_count % Config.BATCH_SIZE == 0:
                 break_time = random.randint(Config.BATCH_BREAK_MIN, Config.BATCH_BREAK_MAX)
                 log_progress(f"☕ Batch break: Waiting {break_time//60} minutes...")
-                time.sleep(break_time)
+                if self.interruptible_sleep(break_time):
+                    log_progress("🛑 Stop requested during batch break.")
+                    report["stopped_by_user"] = True
+                    break
             
             # Process single post
             result = self._process_single_post(url, provided_content, log_progress)
@@ -104,7 +109,10 @@ class Agent:
                 if processed < actual_target:
                     delay = random.randint(Config.REPLY_DELAY_MIN, Config.REPLY_DELAY_MAX)
                     log_progress(f"⏳ Human delay: {delay} seconds...")
-                    time.sleep(delay)
+                    if self.interruptible_sleep(delay):
+                        log_progress("🛑 Stop requested during delay.")
+                        report["stopped_by_user"] = True
+                        break
             
             elif result["status"] == "skipped":
                 report["skipped"] += 1
@@ -114,10 +122,14 @@ class Agent:
                 report["errors"].append(f"{url}: {result.get('error', 'Unknown error')}")
                 log_progress(f"❌ Failed: {result.get('error', 'Unknown')}")
         
-        log_progress(f"\n🎉 Session Complete!")
+        if report["stopped_by_user"]:
+            log_progress(f"\n🛑 Session stopped by user.")
+            report["status"] = "stopped"
+        else:
+            log_progress(f"\n🎉 Session Complete!")
+            report["status"] = "completed"
+
         log_progress(f"📈 Posted: {report['total_replies']}, Skipped: {report['skipped']}, Failed: {report['failed']}")
-        
-        report["status"] = "completed"
         return report
     
     def _process_single_post(self, url: str, provided_text: str = None, logger=None) -> Dict:

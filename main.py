@@ -55,22 +55,30 @@ async def run_automation(
             "message": "Session already running!"
         })
     
-    # Parse raw text to find URLs and their associated content
-    import re
-    link_pattern = r'https?://(?:twitter|x)\.com/[^/ ]+/status/\d+'
-    matches = list(re.finditer(link_pattern, post_urls))
+    # --- ROBUST PARSER ---
+    # Split text into blocks by URL, but KEEP the URLs for context
+    # This regex finds URLs
+    link_pattern = r'(https?://(?:twitter|x)\.com/[^/ \n\r\t]+(?:/status/\d+)?(?:(?:\?|#)\S+)?|https?://t\.co/\S+)'
+    
+    # Split by link but keep the links in the result
+    parts = re.split(f"({link_pattern})", post_urls)
     
     session_data = []
-    for i, match in enumerate(matches):
-        url = match.group()
-        # Grab text following this URL until the next URL starts
-        start = match.end()
-        end = matches[i+1].start() if i+1 < len(matches) else len(post_urls)
-        content = post_urls[start:end].strip()
+    # parts will look like: [text_before_url1, url1, text_between_1_and_2, url2, ...]
+    for i in range(1, len(parts), 2):
+        url = parts[i].strip()
+        # Text could be before OR after. 
+        # Usually Grok gives: "Some text https://x.com/..." OR "https://x.com/... ne post kiya: some text"
+        text_before = parts[i-1].strip()
+        text_after = parts[i+1].strip() if i+1 < len(parts) else ""
         
-        # Clean up common garbage like "ne post kiya:", etc if desired
-        # but for now we'll pass the whole block to the agent
-        session_data.append({'url': url, 'content': content})
+        # Heuristic: Combine them and clean up "ne post kiya:" garbage
+        combined_context = f"{text_before}\n{text_after}".strip()
+        # Clean common "Grokisms"
+        combined_context = re.sub(r'(?:ne )?post (?:kiya|ha?i):?\s*', '', combined_context, flags=re.IGNORECASE)
+        combined_context = combined_context.strip().strip('"').strip("'")
+        
+        session_data.append({'url': url, 'content': combined_context})
     
     if not session_data:
         return JSONResponse({
@@ -93,7 +101,10 @@ async def run_automation(
             report = agent.run_session(session_data, target_count, progress_callback)
 
             session_status["report"] = report
-            session_status["progress"] = "Completed!"
+            if report.get("status") == "stopped":
+                session_status["progress"] = "🛑 Stopped by user"
+            else:
+                session_status["progress"] = "Completed!"
         except Exception as e:
             session_status["report"] = {
                 "status": "error",
@@ -130,7 +141,7 @@ async def stop_automation():
         agent.stop_requested = True
         return JSONResponse({
             "status": "success",
-            "message": "Stop signal sent. Session will end after current post."
+            "message": "🛑 Stop signal sent. Bot will wrap up in 1-2 seconds."
         })
     else:
         return JSONResponse({
